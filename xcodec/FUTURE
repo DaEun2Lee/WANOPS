@@ -1,0 +1,23 @@
+Long-term possible goals:
+o) We should really be looking up hashes both in our cache and in our cache
+   of hashes from the peer.  If it's only in the peer's cache, we can add it
+   to ours and send it as if it were a new piece of data.  This could either
+   be a big speedup or a big slowdown for the encoding process.  It depends
+   on how often we see data from the peer then be data we need to send back
+   to the peer.
+o) Stop using hashes like names and use actual names.  This abstraction will
+   allow us to minimize the cost of collisions, speed lookup, etc.  It also
+   means that different systems will be able to use different encode/hash
+   algorithms for lookup based on their requirements.
+o) Expand the protocol to have different ops for referening hashes in our
+   namespace vs. those of our peer...
+o) Exchange not just our UUIDs but a list of all of the UUIDs of other systems
+   we're talking to, allowing us to also reference hashes in other namespaces
+   that we share access to.
+o) Also exchange other parameters, like size of the backref window, using the
+   minimum between the two peers.
+o) Add a pass number to the name so we can do recursive encoding.  Use a
+   limited number of bits and put this above the opcode so that we can have
+   separate back-reference windows, etc., for each pass and so that we can
+   avoid escaping for subsequent passes, perhaps?
+o) Incorporate run-length encoding.

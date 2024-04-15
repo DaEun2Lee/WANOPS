@@ -1,0 +1,114 @@
+o) Assign scheduler to callback by the lock if one is not specified.  That way
+   we can ensure parallelism but resist ping-ponging and reduce contention.
+o) Fix the many broken examples and tests.
+o) Merge TimeoutThread into CallbackThread?  Some functional reasons to do so,
+   namely related to exiting, but is it aesthetic or correct?  Should every
+   thread that can run Callbacks also be able to schedule timeouts?
+   o) It seems like the right solution to this is pretty unsurprising.  Just
+      have each thread have its own predicates that need to be satisfied before
+      it will actuall heed a stop request, like the CallbackThread does.  So
+      EventPoll waits for no more registered handlers, the I/O thread does
+      likewise, the timeout code does likewise, etc.  We'd want to be a little
+      more conservative somehow, since we might have one fd being worked on and
+      need to service multiple reads or writes before quitting, right?  Also,
+      this all moves up the need for stop callbacks to actually get called!
+      o) Remember to handle wakeups on cancel, too, in this case.  So for the
+         EventPoll code, we would want to wakeup the sleeping thread if we've
+         just killed the last poll handler and stop_ is true.
+      o) Could require and seek quorum for threads to actually stop.  They could
+         indicate that they are idle and have been asked to stop, and when all
+         are idle, threads exit.  Once asked to stop, they will check in as idle
+         whenever they are, but allow processing of new work.
+   o) Get rid of WorkerThread once this is all done, or create a new class
+      based on the common traits of our now much richer set of Threads.
+o) Fix races with kqueue EventPoll.
+o) Proper stop handling for EventThread.
+   XXX What is there now is clearly not entirely right.
+o) Convert other poll mechanisms.
+o) Make TimeoutQueue/CallbackQueue suck less.
+o) Make signals suck slightly less, maybe.
+   XXX Seriously, signal interrupt handling sucks.
+o) Since XCodec pipes are consumer-producer now, we can defer production to a
+   thread, or at least do the real work in a thread and then have the pipes get
+   work to and from the thread.  It should be easy enough to abstract.  It
+   might be nice to have a generic framework for doing pipe processing for any
+   kind of pipe or maybe just a consumer-producer pipe in a specified thread.
+   Then the XCodec could just create a thread for each instance.
+o) Finally split callbacks and actions from event into callback?
+
+o) Do a pass with Log taking a LogHandle& not a const LogHandle& so I can
+   find places using hard-coded strings to move into LogHandles.  Using a
+   LogHandle is vastly superior since it probably means doing the right
+   thing in virtual classes so that errors in the base class caused by the
+   subclass make it clear where the problem might be.
+o) PipeProducer::input_do; PipeProducer::input_cork(), partial consume() ->
+   require input_cork().
+
+o) Make tack use the EventSystem and IOSystem now that the performance of
+   the latter is substantially better than the hand-rolled I/O of tack.
+o) Replace singletons with thread-local storage.
+o) Get simple packet capture/injection stuff working, enough to do some trivial
+   packet tunneling / deduplication stuff.
+o) Packet framing, so we can divide incoming Buffers up into protocol control
+   and data fields, so that we deduplicate at useful boundaries and don't do
+   things like include ephemeral fields or sensitive information.
+o) Add centralized implementations of Catenate and other patterns in lots of
+   the tests.
+
+o) Test error handling in epoll.
+o) Test error handling with port(3C).
+o) Make UnixClient and UnixServer take the SocketType as an argument to make
+   it possible to support both stream-orientation and datagram-orientation?
+   Would need to update UnixServer's API to support both models.
+o) Something higher-level than Pipe which supports various disciplines and
+   makes it easier to write stream processing modules.
+o) Make *Client::connect() work like TCPClient::connect().
+o) Move to the getrusage-based Timer class and make it clear that that is what
+   it is for.  Perhaps create a Timer base class and a UserTimer and WallTimer
+   for real use?
+o) How do we find out if remote has shut down read channel so we can stop
+   writing and shut down a Splice?
+o) Connector abstraction: connection pooling / connecting via a SOCKS server.
+
+o) TLS.
+
+o) Handle TCP OOB data.
+
+o) A CLI program for management.  Remember to USE_POLL=select since Mac OS X can
+   only use select(2) for stdin and stdout.
+o) Make it possible to detect when we are sending to a socket that is also
+   within WANProxy and avoid a system call -- just copy directly to the
+   appropriate buffer.  It should be pretty easy to do this with the IO queueing
+   system if we getpeername/getsockname to identify this occurring.
+o) Add an IO queueing system that will make it possible to use lio_listio on
+   systems that support it.
+o) Make the XCodec encoder and decoder asynchronous.
+o) Connection table. Database.
+o) HTTP termination and reinitiation good enough to support an HTTP proxy mode.
+
+Ongoing:
+o) Add lots of comments.
+o) Fix bugs.
+o) Audit log levels.
+o) Try to remove HALTs and NOTREACHEDs that aren't legitimate.
+o) Give better debug information from configuration system.
+
+Maybe:
+o) A resolver that's less fragile than the OS-supplied ones.  Mac OS X, at
+   minimum, neither keeps a pool of file descriptors nor errors out gracefully
+   when the OS is out of them, leading to hangs.
+o) Run-length-encoding.
+o) Many compression algorithms.
+o) Allow chaining codecs.
+o) Some decent way to configure Pipelines.
+o) Figure out a good name for a Pipeline, since Pipeline seems rubbish.
+o) Merge two Pipelines.
+o) Convert the SOCKS proxy server to a PipeEndpoint that merges the Pipeline
+   that it is connected to with a newly-created one.
+o) Be less protocol-ignorant; add protocol-aware framing to WANProxy.  For
+   example, HTTP response headers are likely to include some amount of changing
+   data (timestamps, etc.) so perhaps it's better to take a clean shot at the
+   start of the content.  And perhaps it's better to convert to large chunks in
+   chunked encoding mode to get bigger windows of data to encode.  No need to
+   remember the last 3 bytes of a chunk, the chunk header, and the next N bytes,
+   if the chunks won't be laid out the same every time.  Right?

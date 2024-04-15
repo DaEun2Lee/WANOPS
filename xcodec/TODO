@@ -1,0 +1,29 @@
+o) Use a 16-bit window counter rather than an 8-bit one so we have an 8MB window
+   rather than a 32KB one.
+   XXX Preliminary tests show this to be a big throughput hit.  Need to check
+       whether the gains are worth it.
+o) Don't let a peer claim to have our UUID?
+o) Do lookups in the peer's dictionary and ours at the same time.
+o) Put a generation number in the hashes so that if the remote side recycles a
+   hash, we can do something about it more than we do now.
+o) Actually, just use names instead of hashes, but look up data by hash and then
+   use its symbolic name to refer to it.  Names could just be incrementing 64-bit
+   integers, or a mix of the hash with a counter, or any number of things.  The
+   key here is to limit, or detect, reuse.  If we use a 56-bit hash, we can keep
+   the top 8 bits for a generation number.  Other possibilities arise.
+
+   For now can we just track hashes that have been evicted and not reuse them, or
+   warn every remote peer when they first connect?  Like, keep an eviction list
+   for each UUID we speak to, even.  All the hashes for a 2GB cache would add up
+   to 8MB.  Surely that's worth it?  Should we just keep generation numbers for
+   every hash we've ever generated?
+
+   Really, we need a master index of hashes, because this is effectively what we
+   want for a good two-level cache system.  Then we can store a generation number
+   there, and modify the protocol to send a generation number along with the
+   hash.  This is more overhead, but by keeping it out of the hash we avoid the
+   need for a two-level lookup, of finding name by hash.  Then on each reference
+   or definition, the peer can simply decide whether we need to make an eviction.
+o) Allow the user to limit how many frames we send without receiving an ADVANCE.
+   That's not trivial because we have to be able to restart the encoder once we
+   get ADVANCE.  Still, only a few hours of work.
