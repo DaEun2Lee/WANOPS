@@ -1,26 +1,5 @@
 /*
- * Copyright (c) 2008-2016 Juli Mallett. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * made by delee
  */
 
 #include <event/event_callback.h>
@@ -30,21 +9,21 @@
 
 #include <io/net/tcp_client.h>
 
-TCPClient::TCPClient(SocketImpl impl, SocketAddressFamily family)
+mTCPClient::mTCPClient(SocketImpl impl, SocketAddressFamily family)
 : log_("/tcp/client"),
-  mtx_("TCPClient"),
+  mtx_("mTCPClient"),
   impl_(impl),
   family_(family),
   socket_(NULL),
-  close_complete_(NULL, &mtx_, this, &TCPClient::close_complete),
+  close_complete_(NULL, &mtx_, this, &mTCPClient::close_complete),
   close_action_(NULL),
-  connect_complete_(NULL, &mtx_, this, &TCPClient::connect_complete),
-  connect_cancel_(&mtx_, this, &TCPClient::connect_cancel),
+  connect_complete_(NULL, &mtx_, this, &mTCPClient::connect_complete),
+  connect_cancel_(&mtx_, this, &mTCPClient::connect_cancel),
   connect_action_(NULL),
   connect_callback_(NULL)
 { }
 
-TCPClient::~TCPClient()
+mTCPClient::~mTCPClient()
 {
 	ASSERT_NULL(log_, connect_action_);
 	ASSERT_NULL(log_, connect_callback_);
@@ -57,7 +36,7 @@ TCPClient::~TCPClient()
 }
 
 Action *
-TCPClient::connect(const std::string& iface, const std::string& name, SocketEventCallback *ccb)
+mTCPClient::connect(const std::string& iface, const std::string& name, SocketEventCallback *ccb)
 {
 	ScopedLock _(&mtx_);
 	ASSERT_NULL(log_, connect_action_);
@@ -131,7 +110,7 @@ TCPClient::connect_cancel(void)
 }
 
 void
-TCPClient::connect_complete(Event e)
+mTCPClient::connect_complete(Event e)
 {
 	ASSERT_LOCK_OWNED(log_, &mtx_);
 	connect_action_->cancel();
@@ -143,7 +122,7 @@ TCPClient::connect_complete(Event e)
 }
 
 void
-TCPClient::close_complete(void)
+mTCPClient::close_complete(void)
 {
 	ASSERT_LOCK_OWNED(log_, &mtx_);
 	close_action_->cancel();
@@ -153,15 +132,15 @@ TCPClient::close_complete(void)
 }
 
 Action *
-TCPClient::connect(SocketImpl impl, SocketAddressFamily family, const std::string& name, SocketEventCallback *cb)
+mTCPClient::connect(SocketImpl impl, SocketAddressFamily family, const std::string& name, SocketEventCallback *cb)
 {
-	TCPClient *tcp = new TCPClient(impl, family);
+	mTCPClient *tcp = new mTCPClient(impl, family);
 	return (tcp->connect("", name, cb));
 }
 
 Action *
-TCPClient::connect(SocketImpl impl, SocketAddressFamily family, const std::string& iface, const std::string& name, SocketEventCallback *cb)
+mTCPClient::connect(SocketImpl impl, SocketAddressFamily family, const std::string& iface, const std::string& name, SocketEventCallback *cb)
 {
-	TCPClient *tcp = new TCPClient(impl, family);
+	mTCPClient *tcp = new mTCPClient(impl, family);
 	return (tcp->connect(iface, name, cb));
 }
