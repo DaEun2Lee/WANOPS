@@ -13,7 +13,10 @@
 #include <io/socket/resolver.h>
 #include <io/socket/mtcp_socket_uinet.h>
 
-#include <uinet_api.h>
+//#include <uinet_api.h>
+//What is it???
+#include <mtcp_api.h>
+
 
 #define UINET_READ_BUFFER_SIZE (64*1024)
 
@@ -82,6 +85,13 @@ SocketUinet::passive_receive_upcall(struct uinet_socket *, void *arg, int)
 	return (UINET_SU_OK);
 }
 
+/*
+	@delee
+	mTCPServer를 위해 바꿔야하는 함수
+	accept, close, getsockname 
+*/
+
+
 Action *
 SocketUinet::accept(SocketEventCallback *cb)
 {
@@ -94,6 +104,7 @@ SocketUinet::accept(SocketEventCallback *cb)
 
 	uinet_soupcall_set(so_, UINET_SO_RCV, passive_receive_upcall, this);
 
+
 	accept_schedule();
 
 	return (&accept_cancel_);
@@ -105,7 +116,7 @@ SocketUinet::accept_schedule(void)
 	if (accept_action_ != NULL)
 		return;
 
-	accept_action_ = accept_ready_.schedule();
+	accept_action_ = accept_ready_. e();
 }
 
 void
@@ -154,29 +165,66 @@ SocketUinet::accept_cancel(void)
 }
 
 bool
-SocketUinet::bind(const std::string& name)
+SocketUinet::m_bind(const std::string& name)
 {
 	socket_address addr;
 
-	if (!addr(domain_, socktype_, protocol_, name)) {
-		ERROR(log_) << "Invalid name for bind: " << name;
-		return (false);
-	}
+	// if (!addr(domain_, socktype_, protocol_, name)) {
+	// 	ERROR(log_) << "Invalid name for bind: " << name;
+	// 	return (false);
+	// }
 
-	int on = 1;
-	int error = uinet_sosetsockopt(so_, UINET_SOL_SOCKET, UINET_SO_REUSEADDR, &on, sizeof on);
-	if (error != 0) {
-		ERROR(log_) << "Could not setsockopt(SO_REUSEADDR): " << strerror(uinet_errno_to_os(error));
-	}
+	// int on = 1;
+	// int error = uinet_sosetsockopt(so_, UINET_SOL_SOCKET, UINET_SO_REUSEADDR, &on, sizeof on);
+	// if (error != 0) {
+	// 	ERROR(log_) << "Could not setsockopt(SO_REUSEADDR): " << strerror(uinet_errno_to_os(error));
+	// }
 
-	/* XXX assuming that OS sockaddr internals are laid out the same as UINET sockaddr internals */
-	error = uinet_sobind(so_, reinterpret_cast<struct uinet_sockaddr *>(&addr.addr_.sockaddr_));
-	if (error != 0) {
+	// /* XXX assuming that OS sockaddr internals are laid out the same as UINET sockaddr internals */
+	// error = uinet_sobind(so_, reinterpret_cast<struct uinet_sockaddr *>(&addr.addr_.sockaddr_));
+	// if (error != 0) {
+	// 	ERROR(log_) << "Could not bind: " << strerror(uinet_errno_to_os(error));
+	// 	return (false);
+	// }
+
+	/*
+		int mtcp_bind(mctx_t mctx, int sockid, const struct sockaddr *addr, socklen_t addrlen);
+
+		- return_value
+			- 0 : success
+			- 1 : failure 
+	*/
+	
+	result = mtcp_bind(mctx_t mctx, int sockid, const struct sockaddr *addr, socklen_t addrlen);
+
+	if (result < 0){
+		//mtcp_bind failure
+		//errono has what kind of errors
+
 		ERROR(log_) << "Could not bind: " << strerror(uinet_errno_to_os(error));
-		return (false);
+
+		switch(strerror(errno)){
+		case EBADF:
+			// sockid is not a valid socket descriptor for binding to an address.
+			ERROR(log_) << "EBADF - Invalid socket descriptor for bind: " << name;
+			break;
+		
+		case EINVAL:
+			// The addr argument is NULL. This may also mean that an address is already bound to the current sockid descriptor. 
+			ERROR(log_) << "EINVAL - address is NULL or already bound for bind: " << name;
+			break;
+		case ENOTSOCK:
+			// The socket referred to by sockid has an invalid type.
+			ERROR(log_) << "ENOTSOCK - invalid sockid for bind: " << name;
+			break;
+		}
 	}
 
 	return (true);
+
+
+
+	
 }
 
 int
@@ -817,20 +865,25 @@ SocketUinet::upcall_do(void)
 std::string
 SocketUinet::getpeername(void) const
 {
-	socket_address sa;
-	struct uinet_sockaddr *usa;
+	// socket_address sa;
+	// struct uinet_sockaddr *usa;
 
-	int error = uinet_sogetpeeraddr(so_, &usa);
-	if (error != 0)
-		return ("<unknown>");
+	// int error = uinet_sogetpeeraddr(so_, &usa);
+	// if (error != 0)
+	// 	return ("<unknown>");
 
-	/* XXX Check len.  */
+	// /* XXX Check len.  */
 
-	/* XXX assuming that OS sockaddr internals are laid out the same as UINET sockaddr internals */
-	sa.addrlen_ = usa->sa_len;
-	::memcpy(&sa.addr_.sockaddr_, usa, sa.addrlen_); 
+	// /* XXX assuming that OS sockaddr internals are laid out the same as UINET sockaddr internals */
+	// sa.addrlen_ = usa->sa_len;
+	// ::memcpy(&sa.addr_.sockaddr_, usa, sa.addrlen_); 
 
-	uinet_free_sockaddr(usa);
+	// uinet_free_sockaddr(usa);
+	/*
+	@delee
+	int mtcp_getpeername(mctx_t mctx, int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+	*/
+	int mtcp_getpeername(mctx_, sockfd_, struct sockaddr *addr, socklen_t *addrlen);
 
 	return ((std::string)sa);
 }

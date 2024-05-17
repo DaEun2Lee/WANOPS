@@ -114,6 +114,9 @@ SocketUinet::accept(SocketEventCallback *cb)
 	accept_callback_ = cb;
 
 	uinet_soupcall_set(so_, UINET_SO_RCV, passive_receive_upcall, this);
+	/*
+		void  uinet_soupcall_set(struct uinet_socket *so, int which, int (*func)(struct uinet_socket *, void *, int), void *arg);
+	*/
 
 	accept_schedule();
 
